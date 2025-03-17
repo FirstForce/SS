@@ -16,14 +16,14 @@ func NewTLSConfig() *tls.Config {
 	// Alternatively, manually add CA certificates to
 	// default openssl CA bundle.
 	certpool := x509.NewCertPool()
-	pemCerts, err := os.ReadFile("../certs/ca.crt")
+	pemCerts, err := os.ReadFile("/certs/ca.crt")
 	if err != nil {
 		panic(err)
 	}
 	certpool.AppendCertsFromPEM(pemCerts)
 
 	// Import client certificate/key pair
-	cert, err := tls.LoadX509KeyPair("../certs/web.crt", "../certs/web.key")
+	cert, err := tls.LoadX509KeyPair("/certs/web.crt", "/certs/web.key")
 	if err != nil {
 		panic(err)
 	}
