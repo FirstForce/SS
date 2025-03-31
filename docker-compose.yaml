@@ -13,6 +13,19 @@ services:
     networks:
       - app_network
   
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mqtt_broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    networks:
+      - app_network
+  
   app-backend:
     build:
       context: .
@@ -20,12 +33,14 @@ services:
     container_name: app_backend
     depends_on:
       - postgres
+      - mosquitto
     ports:
       - "8080:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/db
       SPRING_DATASOURCE_USERNAME: admin
       SPRING_DATASOURCE_PASSWORD: admin
+      MQTT_BROKER_URL: tcp://mosquitto:1883
     networks:
       - app_network
 
