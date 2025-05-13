@@ -1,14 +1,21 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
+
+	"mqtt-streaming-server/routes"
 )
 
 func NewTLSConfig() *tls.Config {
@@ -46,13 +53,40 @@ func NewTLSConfig() *tls.Config {
 	}
 }
 
-var f mqtt.MessageHandler = func(client mqtt.Client, msg mqtt.Message) {
+var f mqtt.MessageHandler = func(_ mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("TOPIC: %s\n", msg.Topic())
 	fmt.Printf("MSG: %s\n", msg.Payload())
 }
 
 func main() {
 	fmt.Println("Hello, World!")
+
+	// Connect to MongoDB
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	db, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo-db:27017"))
+	if err != nil {
+		fmt.Println("Failed to connect to MongoDB:", err)
+		panic(err)
+	}
+	defer func() {
+		if err := db.Disconnect(ctx); err != nil {
+			panic(err)
+		}
+	}()
+
+	fmt.Println("Connected to MongoDB!")
+
+	// Initialize user routes
+	routes.InitUserRoutes(db)
+
+	go func() {
+		fmt.Println("Starting HTTP server on port 8080...")
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			panic(err)
+		}
+	}()
 
 	c := make(chan os.Signal, 1)
 
