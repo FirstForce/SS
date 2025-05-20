@@ -13,16 +13,17 @@ import (
 )
 
 type UserController struct {
-	db *mongo.Client
+	db *mongo.Database
 }
 
-func InitUserRoutes(db *mongo.Client) {
+func InitUserRoutes(db *mongo.Database, mux *http.ServeMux) {
 	// Initialize the UserController with the database client
 	userController := &UserController{db: db}
 
-	http.HandleFunc("/register", userController.Register)
-	http.HandleFunc("/login", userController.Login)
-	http.HandleFunc("/profile", userController.GetProfile)
+	mux.HandleFunc("/register", userController.Register)
+	mux.HandleFunc("/login", userController.Login)
+	// Use withAuth middleware for protected routes
+	mux.Handle("/profile", withAuth(http.HandlerFunc(userController.GetProfile)))
 }
 
 func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +49,7 @@ func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the user to the database
-	collection := ctlr.db.Database("test").Collection("users")
+	collection := ctlr.db.Collection("users")
 	_, err = collection.InsertOne(context.Background(), map[string]string{
 		"email":    req.Email,
 		"password": string(hashedPassword),
@@ -78,7 +79,7 @@ func (ctlr UserController) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check if the user exists
-	collection := ctlr.db.Database("test").Collection("users")
+	collection := ctlr.db.Collection("users")
 	var user struct {
 		Email    string `bson:"email"`
 		Password string `bson:"password"`
@@ -117,43 +118,18 @@ func (ctlr UserController) GetProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse the JWT token from the Authorization header
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Authorization header missing", http.StatusUnauthorized)
-		return
-	}
-
-	tokenString := authHeader[len("Bearer "):] // Remove "Bearer " prefix
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte("your-secret-key"), nil
-	})
-	if err != nil || !token.Valid {
-		http.Error(w, "Invalid token", http.StatusUnauthorized)
-		return
-	}
-
-	// Extract email from token claims
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if !ok || !token.Valid {
-		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
-		return
-	}
-	email, ok := claims["email"].(string)
+	email, ok := r.Context().Value("email").(string)
 	if !ok {
-		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		http.Error(w, "Email not found in context", http.StatusUnauthorized)
 		return
 	}
 
 	// Retrieve the user's profile from the database
-	collection := ctlr.db.Database("test").Collection("users")
+	collection := ctlr.db.Collection("users")
 	var user struct {
 		Email string `bson:"email"`
 	}
-	err = collection.FindOne(context.Background(), map[string]string{"email": email}).Decode(&user)
+	err := collection.FindOne(context.Background(), map[string]string{"email": email}).Decode(&user)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return

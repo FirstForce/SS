@@ -1,7 +1,9 @@
 services:
   # Go API Service
   go-api:
+    user: "${UID}:${GID}"
     container_name: go-api
+    env_file: ./server/.env
     build:
       context: server
     depends_on:
@@ -15,6 +17,7 @@ services:
       - backend
 
   broker:
+    user: "${UID}:${GID}"
     image: eclipse-mosquitto:latest
     container_name: broker
     hostname: broker

@@ -15,6 +15,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
+	"mqtt-streaming-server/broker"
 	"mqtt-streaming-server/routes"
 )
 
@@ -53,37 +54,31 @@ func NewTLSConfig() *tls.Config {
 	}
 }
 
-var f mqtt.MessageHandler = func(_ mqtt.Client, msg mqtt.Message) {
-	fmt.Printf("TOPIC: %s\n", msg.Topic())
-	fmt.Printf("MSG: %s\n", msg.Payload())
-}
-
 func main() {
-	fmt.Println("Hello, World!")
-
 	// Connect to MongoDB
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	db, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo-db:27017"))
+	mongoClient, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://mongo-db:27017"))
 	if err != nil {
 		fmt.Println("Failed to connect to MongoDB:", err)
 		panic(err)
 	}
 	defer func() {
-		if err := db.Disconnect(ctx); err != nil {
+		if err := mongoClient.Disconnect(ctx); err != nil {
 			panic(err)
 		}
 	}()
+	db := mongoClient.Database("mqtt-streaming-server")
 
 	fmt.Println("Connected to MongoDB!")
 
 	// Initialize user routes
-	routes.InitUserRoutes(db)
+	handler := routes.InitRoutes(db)
 
 	go func() {
 		fmt.Println("Starting HTTP server on port 8080...")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
+		if err := http.ListenAndServe(":8080", handler); err != nil {
 			panic(err)
 		}
 	}()
@@ -92,12 +87,13 @@ func main() {
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
+	brokerHandler := broker.NewBrokerHandler(db)
+
 	tlsconfig := NewTLSConfig()
 
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker("ssl://broker:8883")
 	opts.SetClientID("web").SetTLSConfig(tlsconfig)
-	opts.SetDefaultPublishHandler(f)
 
 	// Start the connection
 	client := mqtt.NewClient(opts)
@@ -106,7 +102,7 @@ func main() {
 	}
 
 	// Subscribe to a Topic
-	if token := client.Subscribe("general", 0, f); token.Wait() && token.Error() != nil {
+	if token := client.Subscribe("photos", 0, brokerHandler.HandlePhoto); token.Wait() && token.Error() != nil {
 		fmt.Println(token.Error())
 		os.Exit(1)
 	}
