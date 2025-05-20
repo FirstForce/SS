@@ -1,1 +1,64 @@
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/vendor/
 
+# Android
+*.apk
+*.aab
+*.aar
+*.ap_
+*.dex
+*.class
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
+.navigation/
+*.log
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+.classpath
+.project
+.settings/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Docker
+.env
+docker-compose.override.yml
+
+# Certificates (security sensitive)
+/certs/
+*.crt
+*.key
+*.pem
+*.p12
+*.jks
+
+# Build outputs
+/bin/
+/dist/
+/out/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
