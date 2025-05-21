@@ -1,72 +1,64 @@
 services:
   # Go API Service
   go-api:
+    user: "${UID}:${GID}"
     container_name: go-api
-    build:
-      context: server
-    # depends_on:
-    #   # postgres-db:
-    #   #   condition: service_healthy
-    #   broker:
-    #     condition: service_healthy
-    # env_file: .env
+    image: stefandarius/mqtt-ss-api:latest
+    env_file: .env
+    depends_on:
+      - mongo-db
+      - broker
     ports:
       - 8080:8080
-    volumes:
-      - ./certs/:/certs
     networks:
-        - backend
+      - backend
+    secrets:
+      - ca.crt
+      - web.crt
+      - web.key
 
   broker:
+    user: "${UID}:${GID}"
     image: eclipse-mosquitto:latest
     container_name: broker
     hostname: broker
-    restart: unless-stopped
     ports:
       - "8883:8883"
     volumes:
       - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./certs:/mosquitto/config/certs
+    networks:
+      - backend
+    secrets:
+      - ca.crt
+      - server.crt
+      - server.key
+
+  mongo-db:
+    container_name: mongo-db
+    image: mongo:latest
+    env_file: .env
+    command: ["--auth"]
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongo-data:/data/db
     networks:
       - backend
 
-  # PostgreSQL Database Service
-  # postgres-db:
-  #   container_name: postgres-db
-  #   image: postgres:latest
-  #   environment:
-  #     POSTGRES_DB: ${DB_NAME}
-  #     POSTGRES_USER: ${DB_USER}
-  #     POSTGRES_PASSWORD: ${DB_PASSWORD}
-  #     PGUSER: ${DB_USER}
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -d ${DB_NAME} -U ${DB_USER}"]
-  #     interval: 5s
-  #     timeout: 5s
-  #     retries: 5
-  #   volumes:
-  #       - pgdata:/var/lib/postgresql/data
-  #   networks:
-  #       - backend
-  #       - database
-  #
-  # # PostgreSQL Admin Page (Adminer)
-  # postgres-admin:
-  #   image: adminer:latest
-  #   container_name: postgres-admin
-  #   ports:
-  #     - "3000:8080"
-  #   depends_on:
-  #     - postgres-db
-  #   environment:
-  #     ADMINER_DEFAULT_SERVER: postgres-db
-  #   networks:
-  #       - database
-
-# volumes:
-#   pgdata:
-#     driver: local
+volumes:
+  mongo-data:
 
 networks:
   backend:
-  # database:
+
+secrets:
+  ca.crt:
+    external: true
+  web.crt:
+    external: true
+  web.key:
+    external: true
+  server.crt:
+    external: true
+  server.key:
+    external: true
