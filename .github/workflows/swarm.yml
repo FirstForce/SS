@@ -66,5 +66,5 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         script: |
-          docker pull $IMAGE_NAME:${{ steps.vars.outputs.sha_short }}
+          docker pull stefandarius/mqtt-ss-api:${{ steps.vars.outputs.sha_short }}
           docker stack deploy -c /home/${{ secrets.SSH_USER }}/mystack/docker-compose.deploy.yml mystack
