@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -19,6 +18,7 @@ type Photo struct {
 	Timestamp    time.Time          `json:"timestamp" bson:"timestamp"`
 	ImageType    string             `json:"image_type" bson:"image_type"`
 	PresignedURL string             `json:"presigned_url" bson:",omitempty"`
+	DeviceID     string             `json:"device_id" bson:"device_id"`
 }
 
 type PhotoController struct {
@@ -36,6 +36,8 @@ func (ctlr PhotoController) GetPhotos(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
+
+	ctx := r.Context()
 
 	start := r.URL.Query().Get("start")
 	end := r.URL.Query().Get("end")
@@ -61,7 +63,7 @@ func (ctlr PhotoController) GetPhotos(w http.ResponseWriter, r *http.Request) {
 	}
 
 	collection := ctlr.db.Collection("photos")
-	cursor, err := collection.Find(context.Background(), map[string]any{
+	cursor, err := collection.Find(ctx, map[string]any{
 		"timestamp": map[string]any{
 			"$gte": time.Unix(startInt, 0),
 			"$lte": time.Unix(endInt, 0),
@@ -71,16 +73,16 @@ func (ctlr PhotoController) GetPhotos(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to fetch photos", http.StatusInternalServerError)
 		return
 	}
-	defer cursor.Close(context.Background())
+	defer cursor.Close(ctx)
 
 	var photos []Photo
-	for cursor.Next(context.Background()) {
+	for cursor.Next(ctx) {
 		var photo Photo
 		if err := cursor.Decode(&photo); err != nil {
 			http.Error(w, "Failed to decode photo", http.StatusInternalServerError)
 			return
 		}
-		presignedURL, err := utils.GetPresignedURL(context.Background(), fmt.Sprintf("photos/%d.%s", photo.Timestamp.Unix(), photo.ImageType))
+		presignedURL, err := utils.GetPresignedURL(ctx, fmt.Sprintf("photos/%d.%s", photo.Timestamp.Unix(), photo.ImageType))
 		if err != nil {
 			http.Error(w, "Failed to get presigned URL", http.StatusInternalServerError)
 			return

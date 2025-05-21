@@ -12,6 +12,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type User struct {
+	Email    string `json:"email" bson:"email"`
+	Password string `json:"password" bson:"password"`
+	Role     string `json:"role,omitempty" bson:"role"`
+}
+
 type UserController struct {
 	db *mongo.Database
 }
@@ -32,10 +38,7 @@ func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	var req User
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -50,9 +53,10 @@ func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
 
 	// Save the user to the database
 	collection := ctlr.db.Collection("users")
-	_, err = collection.InsertOne(context.Background(), map[string]string{
-		"email":    req.Email,
-		"password": string(hashedPassword),
+	_, err = collection.InsertOne(context.Background(), User{
+		Email:    req.Email,
+		Password: string(hashedPassword),
+		Role:     "user",
 	})
 	if err != nil {
 		http.Error(w, "Failed to save user", http.StatusInternalServerError)
@@ -69,10 +73,7 @@ func (ctlr UserController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	var req User
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -80,10 +81,7 @@ func (ctlr UserController) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the user exists
 	collection := ctlr.db.Collection("users")
-	var user struct {
-		Email    string `bson:"email"`
-		Password string `bson:"password"`
-	}
+	var user User
 	err := collection.FindOne(context.Background(), map[string]string{"email": req.Email}).Decode(&user)
 	if err != nil {
 		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
@@ -98,7 +96,8 @@ func (ctlr UserController) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Generate JWT token
 	claims := jwt.MapClaims{
-		"email": req.Email,
+		"email": user.Email,
+		"role":  user.Role,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -128,6 +127,7 @@ func (ctlr UserController) GetProfile(w http.ResponseWriter, r *http.Request) {
 	collection := ctlr.db.Collection("users")
 	var user struct {
 		Email string `bson:"email"`
+		Role  string `bson:"role"`
 	}
 	err := collection.FindOne(context.Background(), map[string]string{"email": email}).Decode(&user)
 	if err != nil {

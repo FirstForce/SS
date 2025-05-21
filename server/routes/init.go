@@ -13,6 +13,7 @@ func InitRoutes(db *mongo.Database) http.Handler {
 	mux := http.NewServeMux()
 	InitUserRoutes(db, mux)
 	InitPhotoRoutes(db, mux)
+	InitDeviceRoutes(db, mux)
 
 	corsHandler := withCORS(mux)
 
@@ -69,8 +70,14 @@ func withAuth(next http.Handler) http.Handler {
 			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
 			return
 		}
+		role, ok := claims["role"].(string)
+		if !ok {
+			http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+			return
+		}
 		// Store the email in the request context
 		ctx := context.WithValue(r.Context(), "email", email)
+		ctx = context.WithValue(ctx, "role", role)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

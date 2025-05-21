@@ -3,47 +3,62 @@ services:
   go-api:
     user: "${UID}:${GID}"
     container_name: go-api
-    env_file: ./server/.env
-    build:
-      context: server
+    image: stefandarius/mqtt-ss-api:latest
+    env_file: .env
     depends_on:
       - mongo-db
       - broker
     ports:
       - 8080:8080
-    volumes:
-      - ./certs/:/certs
     networks:
       - backend
+    secrets:
+      - ca.crt
+      - web.crt
+      - web.key
 
   broker:
     user: "${UID}:${GID}"
     image: eclipse-mosquitto:latest
     container_name: broker
     hostname: broker
-    restart: unless-stopped
     ports:
       - "8883:8883"
     volumes:
       - ./broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./certs:/mosquitto/config/certs
     networks:
       - backend
+    secrets:
+      - ca.crt
+      - server.crt
+      - server.key
 
   mongo-db:
     container_name: mongo-db
     image: mongo:latest
-    restart: unless-stopped
+    env_file: .env
+    command: ["--auth"]
     ports:
       - "27019:27017"
     volumes:
       - mongo-data:/data/db
     networks:
       - backend
-    command: "mongod --quiet --logpath /dev/null" 
 
 volumes:
   mongo-data:
 
 networks:
   backend:
+
+secrets:
+  ca.crt:
+    external: true
+  web.crt:
+    external: true
+  web.key:
+    external: true
+  server.crt:
+    external: true
+  server.key:
+    external: true
