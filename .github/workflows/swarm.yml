@@ -57,7 +57,7 @@ jobs:
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_KEY }}
         source: "./broker/mosquitto.conf"
-        target: "/home/${{ secrets.SSH_USER }}/mystack/broker/"
+        target: "/home/${{ secrets.SSH_USER }}/mystack/"
 
     - name: Deploy updated stack on remote server
       uses: appleboy/ssh-action@v1.0.0
