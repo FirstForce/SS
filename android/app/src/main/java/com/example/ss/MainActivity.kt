@@ -70,14 +70,34 @@ class MainActivity : AppCompatActivity() {
         binding.stateButton.setOnClickListener {
             stopTransmission = !stopTransmission
             updateText()
-            Toast.makeText(this, "Stop transmission flag set to true", Toast.LENGTH_SHORT).show()
+            //Toast.makeText(this, "Stop transmission flag set to true", Toast.LENGTH_SHORT).show()
         }
 
         binding.captureButton.setOnClickListener {
             sendManual = true
-            captureImageAndSend()
-            Toast.makeText(this, "Send manual flag set to true", Toast.LENGTH_SHORT).show()
+            captureImageAndSendManual()
+            Log.d("SS", "Sent Manual")
+            //Toast.makeText(this, "Send manual flag set to true", Toast.LENGTH_SHORT).show()
         }
+
+        val handler = android.os.Handler(mainLooper)
+        val updateRunnable = object : Runnable {
+            override fun run() {
+                runOnUiThread {
+                    Log.d("SS", if (manualMode) "MANUAL" else "LIVE")
+                    val status = if (manualMode) "Manual Mode" else "Live Mode"
+                    binding.stateIndicator.text = status
+                    binding.stateIndicator.setTextColor(
+                        ContextCompat.getColor(this@MainActivity,
+                            if (manualMode) android.R.color.holo_blue_dark
+                            else if (stopTransmission) android.R.color.holo_red_dark
+                            else android.R.color.holo_green_dark)
+                    )
+                }
+                handler.postDelayed(this, 5000) // Repeat every 5 seconds
+            }
+        }
+        handler.post(updateRunnable)
 
         if (allPermissionsGranted()) {
             startCamera()
@@ -106,7 +126,9 @@ class MainActivity : AppCompatActivity() {
         mqttClient = MqttClient(serverURI, clientId, null)
 
         mqttClient.setCallback(object : MqttCallback {
-            override fun connectionLost(cause: Throwable?) {}
+            override fun connectionLost(cause: Throwable?) {
+                Log.w("SS", "Connection lost", cause)
+            }
             override fun messageArrived(topic: String?, message: MqttMessage?) {
                 val payload = message?.toString()
 
@@ -114,11 +136,18 @@ class MainActivity : AppCompatActivity() {
 
                 if (payload == "start manual") {
                     manualMode = true
+                    Log.d("SS", "Start Manual")
                 } else if (payload == "start live") {
                     manualMode = false
+                    Log.d("SS", "Start Live")
                 }
+
+                //updateText()
+
             }
-            override fun deliveryComplete(token: IMqttDeliveryToken?) {}
+            override fun deliveryComplete(token: IMqttDeliveryToken?) {
+                Log.d("SS", "Delivery complete")
+            }
         })
 
         val caCrtFile = resources.openRawResource(R.raw.ca)
@@ -130,7 +159,7 @@ class MainActivity : AppCompatActivity() {
         Log.d("SS", "Got ssl socket")
 
         val options = MqttConnectOptions()
-        options.isCleanSession = true
+        options.isCleanSession = false
         options.socketFactory = sslSocketFactory
         //options.isAutomaticReconnect = CONNECTION_RECONNECT
         //options.isCleanSession = CONNECTION_CLEAN_SESSION
@@ -158,11 +187,11 @@ class MainActivity : AppCompatActivity() {
         } catch (ex: MqttException) {
             Toast.makeText(applicationContext, "MQTT Connection Failed", Toast.LENGTH_SHORT).show()
         }
-        publish("device/id/$deviceID", "Device Connected")
+        publish("register/$deviceID", "Medium Phone")
         Toast.makeText(applicationContext, "MQTT Connected", Toast.LENGTH_SHORT).show()
         Log.d("SS", "CONNECTED!!")
 
-        mqttClient.subscribe("device/id/$deviceID")
+        mqttClient.subscribe("setup/$deviceID")
 
         startImageCaptureLoop()
     }
@@ -243,9 +272,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendToMQTT(data: ByteArray) {
         if (mqttClient.isConnected) {
-            val message = MqttMessage(data)
-            message.qos = 0
-            mqttClient.publish("camera/image", message)
+            Thread {
+                val message = MqttMessage(data)
+                message.qos = 0
+                mqttClient.publish("photos/$deviceID", message)
+            }.start()
         }
     }
 
@@ -277,7 +308,9 @@ class MainActivity : AppCompatActivity() {
     fun publish(topic: String, msg: String, qos: Int = 0) {
         try {
             val mqttMessage = MqttMessage(msg.toByteArray())
-            mqttClient.publish(topic, mqttMessage.payload, qos, false)
+            Thread {
+                mqttClient.publish(topic, mqttMessage.payload, qos, false)
+            }.start()
             Log.d("SS", "Message published to topic `$topic`: $msg")
         } catch (e: MqttException) {
             Log.w("SS", "Error publishing to $topic: " + e.message, e)
@@ -286,17 +319,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateText() {
-        if (manualMode) {
-            binding.stateIndicator.text = "Manual Mode"
-            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_blue_dark))
-        }
-        else if (stopTransmission) {
-            binding.stateIndicator.text = "Transmission OFF"
-            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_red_dark))
-        } else {
-            binding.stateIndicator.text = "Transmission ON"
-            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_green_dark))
-        }
+//        if (manualMode) {
+//            binding.stateIndicator.text = "Manual Mode"
+//            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_blue_dark))
+//        }
+//        else if (stopTransmission) {
+//            binding.stateIndicator.text = "Transmission OFF"
+//            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_red_dark))
+//        } else {
+//            binding.stateIndicator.text = "Transmission ON"
+//            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_green_dark))
+//        }
     }
 
 //    fun getSocketFactory(caCrtFile: InputStream, crtFile: InputStream, keyFile: InputStream, password: String): SSLSocketFactory {
