@@ -79,7 +79,7 @@ func main() {
 
 	go func() {
 		fmt.Println("Starting HTTP server on port 8080...")
-		if err := http.ListenAndServe("0.0.0.0:8080", handler); err != nil {
+		if err := http.ListenAndServe(":8080", handler); err != nil {
 			panic(err)
 		}
 	}()
