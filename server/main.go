@@ -12,6 +12,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/otiai10/gosseract/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
@@ -74,21 +75,13 @@ func main() {
 
 	fmt.Println("Connected to MongoDB!")
 
-	// Initialize user routes
-	handler := routes.InitRoutes(db)
-
-	go func() {
-		fmt.Println("Starting HTTP server on port 8080...")
-		if err := http.ListenAndServe(":8080", handler); err != nil {
-			panic(err)
-		}
-	}()
-
 	c := make(chan os.Signal, 1)
 
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
-	brokerHandler := broker.NewBrokerHandler(db)
+	ocrClient := gosseract.NewClient()
+	defer ocrClient.Close()
+	brokerHandler := broker.NewBrokerHandler(db, ocrClient)
 
 	tlsconfig := NewTLSConfig()
 
@@ -112,6 +105,16 @@ func main() {
 		fmt.Println(token.Error())
 		os.Exit(1)
 	}
+
+	// Initialize user routes
+	handler := routes.InitRoutes(db, client)
+
+	go func() {
+		fmt.Println("Starting HTTP server on port 8080...")
+		if err := http.ListenAndServe(":8080", handler); err != nil {
+			panic(err)
+		}
+	}()
 
 	<-c
 }

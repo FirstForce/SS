@@ -10,6 +10,7 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/otiai10/gosseract/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 
 	"mqtt-streaming-server/routes"
@@ -17,12 +18,14 @@ import (
 )
 
 type BrokerHandler struct {
-	db *mongo.Database
+	db        *mongo.Database
+	ocrClient *gosseract.Client
 }
 
-func NewBrokerHandler(db *mongo.Database) BrokerHandler {
+func NewBrokerHandler(db *mongo.Database, ocrClient *gosseract.Client) BrokerHandler {
 	return BrokerHandler{
-		db: db,
+		db:        db,
+		ocrClient: ocrClient,
 	}
 }
 
@@ -52,6 +55,13 @@ func (b BrokerHandler) HandlePhoto(_ mqtt.Client, msg mqtt.Message) {
 		return
 	}
 	fmt.Printf("Image type: %s\n", imageType)
+
+	// Extract text from image
+	text, err := b.ExtractTextFromImage(body)
+	if err != nil {
+		fmt.Printf("Failed to extract text from image: %v\n", err)
+		text = "OCR failed"
+	}
 	// UTC timestamp
 	timestamp := time.Now().UTC()
 	collection = b.db.Collection("photos")
@@ -59,6 +69,7 @@ func (b BrokerHandler) HandlePhoto(_ mqtt.Client, msg mqtt.Message) {
 		ImageType: imageType,
 		Timestamp: timestamp,
 		DeviceID:  deviceID,
+		Text:      text,
 	})
 	if err != nil {
 		fmt.Printf("Failed to insert photo into MongoDB: %v\n", err)
@@ -116,4 +127,14 @@ func (b BrokerHandler) RegisterDevice(_ mqtt.Client, msg mqtt.Message) {
 		return
 	}
 	fmt.Printf("Device updated: %s\n", deviceID)
+}
+
+func (b BrokerHandler) ExtractTextFromImage(imageData []byte) (string, error) {
+	// Use the OCR client to extract text from the image
+	b.ocrClient.SetImageFromBytes(imageData)
+	text, err := b.ocrClient.Text()
+	if err != nil {
+		return "", fmt.Errorf("failed to extract text from image: %v", err)
+	}
+	return text, nil
 }

@@ -19,6 +19,7 @@ type Photo struct {
 	ImageType    string             `json:"image_type" bson:"image_type"`
 	PresignedURL string             `json:"presigned_url" bson:",omitempty"`
 	DeviceID     string             `json:"device_id" bson:"device_id"`
+	Text         string             `json:"text" bson:"text"`
 }
 
 type PhotoController struct {
@@ -41,6 +42,8 @@ func (ctlr PhotoController) GetPhotos(w http.ResponseWriter, r *http.Request) {
 
 	start := r.URL.Query().Get("start")
 	end := r.URL.Query().Get("end")
+	text := r.URL.Query().Get("text")
+	deviceID := r.URL.Query().Get("device_id")
 
 	if start == "" {
 		start = strconv.FormatInt(time.Now().Add(-24*time.Hour).UTC().Unix(), 10)
@@ -62,13 +65,26 @@ func (ctlr PhotoController) GetPhotos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	collection := ctlr.db.Collection("photos")
-	cursor, err := collection.Find(ctx, map[string]any{
+	filters := map[string]any{
 		"timestamp": map[string]any{
 			"$gte": time.Unix(startInt, 0),
 			"$lte": time.Unix(endInt, 0),
 		},
-	})
+	}
+
+	if text != "" {
+		filters["text"] = map[string]any{
+			"$regex":   text,
+			"$options": "i",
+		}
+	}
+
+	if deviceID != "" {
+		filters["device_id"] = deviceID
+	}
+
+	collection := ctlr.db.Collection("photos")
+	cursor, err := collection.Find(ctx, filters)
 	if err != nil {
 		http.Error(w, "Failed to fetch photos", http.StatusInternalServerError)
 		return
