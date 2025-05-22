@@ -69,7 +69,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.stateButton.setOnClickListener {
             stopTransmission = !stopTransmission
-            updateText()
+            //updateText()
             //Toast.makeText(this, "Stop transmission flag set to true", Toast.LENGTH_SHORT).show()
         }
 
@@ -78,6 +78,10 @@ class MainActivity : AppCompatActivity() {
             captureImageAndSendManual()
             Log.d("SS", "Sent Manual")
             //Toast.makeText(this, "Send manual flag set to true", Toast.LENGTH_SHORT).show()
+        }
+
+        binding.modeButton.setOnClickListener {
+            manualMode = !manualMode
         }
 
         val handler = android.os.Handler(mainLooper)
@@ -187,7 +191,9 @@ class MainActivity : AppCompatActivity() {
         } catch (ex: MqttException) {
             Toast.makeText(applicationContext, "MQTT Connection Failed", Toast.LENGTH_SHORT).show()
         }
-        publish("register/$deviceID", "Medium Phone")
+
+        val devname = android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+        publish("register/$deviceID", devname)
         Toast.makeText(applicationContext, "MQTT Connected", Toast.LENGTH_SHORT).show()
         Log.d("SS", "CONNECTED!!")
 
@@ -318,106 +324,50 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateText() {
-//        if (manualMode) {
-//            binding.stateIndicator.text = "Manual Mode"
-//            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_blue_dark))
-//        }
-//        else if (stopTransmission) {
-//            binding.stateIndicator.text = "Transmission OFF"
-//            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_red_dark))
-//        } else {
-//            binding.stateIndicator.text = "Transmission ON"
-//            binding.stateIndicator.setTextColor(getColor(android.R.color.holo_green_dark))
-//        }
+
+    private fun getSocketFactory(
+        caInput: InputStream,
+        certInput: InputStream,
+        keyInput: InputStream,
+        password: String = ""
+    ): SSLSocketFactory {
+        // Load CA certificate
+        val caCert = CertificateFactory.getInstance("X.509")
+            .generateCertificate(caInput) as X509Certificate
+
+        val trustStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        trustStore.load(null)
+        trustStore.setCertificateEntry("ca-cert", caCert)
+
+        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
+        tmf.init(trustStore)
+
+        // Load client certificate
+        val clientCert = CertificateFactory.getInstance("X.509")
+            .generateCertificate(certInput) as X509Certificate
+
+        // Load private key from PEM
+        val keyBytes = keyInput.bufferedReader().useLines { lines ->
+            lines
+                .filter { !it.startsWith("-----") }
+                .joinToString("") { it.trim() }
+        }
+        val decodedKey = Base64.getDecoder().decode(keyBytes)
+        val keySpec = PKCS8EncodedKeySpec(decodedKey)
+        val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpec)
+
+        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        keyStore.load(null)
+        keyStore.setKeyEntry("client-key", privateKey, password.toCharArray(), arrayOf(clientCert))
+
+        val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
+        kmf.init(keyStore, password.toCharArray())
+
+        // Create SSL context
+        val context = SSLContext.getInstance("TLS")
+        context.init(kmf.keyManagers, tmf.trustManagers, null)
+
+        return context.socketFactory
     }
-
-//    fun getSocketFactory(caCrtFile: InputStream, crtFile: InputStream, keyFile: InputStream, password: String): SSLSocketFactory {
-//        Security.addProvider(BouncyCastleProvider())
-//
-//        var caCert: X509Certificate? = null
-//        BufferedInputStream(caCrtFile).use { bis ->
-//            val cf = CertificateFactory.getInstance("X.509")
-//            while (bis.available() > 0) {
-//                caCert = cf.generateCertificate(bis) as X509Certificate
-//
-//            }
-//        }
-//
-//        var cert: X509Certificate? = null
-//        BufferedInputStream(crtFile).use { bis ->
-//            val cf = CertificateFactory.getInstance("X.509")
-//            while (bis.available() > 0) {
-//                cert = cf.generateCertificate(bis) as X509Certificate
-//            }
-//        }
-//
-//        val pemParser = PEMParser(InputStreamReader(keyFile))
-//        val `object` = pemParser.readObject()
-//        val converter = JcaPEMKeyConverter().setProvider("BC")
-//        val key: KeyPair = converter.getKeyPair(`object` as PEMKeyPair)
-//
-//        val caKs = KeyStore.getInstance(KeyStore.getDefaultType())
-//        caKs.load(null, null)
-//        caKs.setCertificateEntry("cert-certificate", caCert)
-//        val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-//        tmf.init(caKs)
-//
-//        val ks = KeyStore.getInstance(KeyStore.getDefaultType())
-//        ks.load(null, null)
-//        ks.setCertificateEntry("certificate", cert)
-//        ks.setKeyEntry("private-cert", key.private, password.toCharArray(), arrayOf(cert))
-//        val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-//        kmf.init(ks, password.toCharArray())
-//
-//        val context = SSLContext.getInstance("TLSv1.2")
-//        context.init(kmf.keyManagers, tmf.trustManagers, null)
-//
-//        return context.socketFactory
-//    }
-private fun getSocketFactory(
-    caInput: InputStream,
-    certInput: InputStream,
-    keyInput: InputStream,
-    password: String = ""
-): SSLSocketFactory {
-    // Load CA certificate
-    val caCert = CertificateFactory.getInstance("X.509")
-        .generateCertificate(caInput) as X509Certificate
-
-    val trustStore = KeyStore.getInstance(KeyStore.getDefaultType())
-    trustStore.load(null)
-    trustStore.setCertificateEntry("ca-cert", caCert)
-
-    val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-    tmf.init(trustStore)
-
-    // Load client certificate
-    val clientCert = CertificateFactory.getInstance("X.509")
-        .generateCertificate(certInput) as X509Certificate
-
-    // Load private key from PEM
-    val keyBytes = keyInput.bufferedReader().useLines { lines ->
-        lines
-            .filter { !it.startsWith("-----") }
-            .joinToString("") { it.trim() }
-    }
-    val decodedKey = Base64.getDecoder().decode(keyBytes)
-    val keySpec = PKCS8EncodedKeySpec(decodedKey)
-    val privateKey = KeyFactory.getInstance("RSA").generatePrivate(keySpec)
-
-    val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-    keyStore.load(null)
-    keyStore.setKeyEntry("client-key", privateKey, password.toCharArray(), arrayOf(clientCert))
-
-    val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-    kmf.init(keyStore, password.toCharArray())
-
-    // Create SSL context
-    val context = SSLContext.getInstance("TLS")
-    context.init(kmf.keyManagers, tmf.trustManagers, null)
-
-    return context.socketFactory
-}
 
 }
