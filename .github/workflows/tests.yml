@@ -14,7 +14,7 @@ on:
 
 jobs:
   test-routes:
-    name: Run tests for /server/routes
+    name: Run tests for ./server/routes
     runs-on: ubuntu-latest
 
     steps:
