@@ -1,12 +1,6 @@
 name: Test Go Routes
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'server/**'
-      - '.github/workflows/tests.yml'
   pull_request:
     paths:
       - 'server/**'
