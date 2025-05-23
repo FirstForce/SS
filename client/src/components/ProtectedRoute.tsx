@@ -7,7 +7,14 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ authRequired }) => {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
+  
+  // While auth state is loading, show nothing (or could add a loading spinner here)
+  if (loading) {
+    return <div className="flex justify-center items-center min-h-[60vh]">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-sky-500"></div>
+    </div>;
+  }
   
   // If auth is required and user is not logged in, redirect to login
   if (authRequired && !isLoggedIn) {
