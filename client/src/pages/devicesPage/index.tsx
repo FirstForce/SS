@@ -50,20 +50,24 @@ const DevicesPage: React.FC = () => {
         }
         
         const data = await response.json();
-        setDevices(Array.isArray(data) ? data : []);
         
-        // Initialize action states for all devices
+        // Filter devices to only include active ones
+        const activeDevices = Array.isArray(data) 
+          ? data.filter(device => device.device_status === "active") 
+          : [];
+        
+        setDevices(activeDevices);
+        
+        // Initialize action states for all active devices
         const initialActionStates: DeviceActionState = {};
-        if (Array.isArray(data)) {
-          data.forEach(device => {
-            initialActionStates[device.device_id] = {
-              loading: false,
-              success: false,
-              error: null,
-              lastMode: null,
-            };
-          });
-        }
+        activeDevices.forEach(device => {
+          initialActionStates[device.device_id] = {
+            loading: false,
+            success: false,
+            error: null,
+            lastMode: null,
+          };
+        });
         setDeviceActionStates(initialActionStates);
         
       } catch (error) {
