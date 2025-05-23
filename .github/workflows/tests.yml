@@ -1,0 +1,40 @@
+name: Test Go Routes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'server/**'
+      - '.github/workflows/tests.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - '.github/workflows/tests.yml'
+
+jobs:
+  test-routes:
+    name: Run tests for /server/routes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24' # Update as needed
+
+      - name: Run tests with coverage
+        run: |
+          cd server/routes
+          go test -coverprofile=coverage.out ./...
+          go tool cover -func=coverage.out | tee coverage.txt
+          coverage=$(go tool cover -func=coverage.out | grep total: | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total coverage: $coverage%"
+          coverage_int=${coverage%.*}
+          if [ "$coverage_int" -lt 30 ]; then
+            echo "Coverage below threshold (30%)"
+            exit 1
+          fi

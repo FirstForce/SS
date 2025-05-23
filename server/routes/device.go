@@ -7,22 +7,21 @@ import (
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"mqtt-streaming-server/domain"
+	"mqtt-streaming-server/repository"
 )
 
-type Device struct {
-	ID           string `json:"id" bson:"_id,omitempty"`
-	DeviceID     string `json:"device_id" bson:"device_id"`
-	DeviceName   string `json:"device_name" bson:"device_name"`
-	DeviceStatus string `json:"device_status" bson:"device_status"`
-}
-
 type DeviceController struct {
-	db         *mongo.Database
-	mqttClient mqtt.Client
+	DeviceRepository domain.DeviceRepository
+	mqttClient       mqtt.Client
 }
 
 func InitDeviceRoutes(db *mongo.Database, mqttClient mqtt.Client, mux *http.ServeMux) {
-	deviceController := &DeviceController{db: db, mqttClient: mqttClient}
+	deviceController := &DeviceController{
+		DeviceRepository: repository.NewDeviceRepository(db),
+		mqttClient:       mqttClient,
+	}
 
 	mux.Handle("/devices", withAuth(http.HandlerFunc(deviceController.GetDevices)))
 	mux.Handle("/devices/switch", withAuth(http.HandlerFunc(deviceController.SwitchDeviceMode)))
@@ -75,18 +74,9 @@ func (ctlr DeviceController) GetDevices(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Fetch devices from the database
-	collection := ctlr.db.Collection("devices")
-	cursor, err := collection.Find(ctx, map[string]any{})
+	devices, err := ctlr.DeviceRepository.GetAllDevices(ctx)
 	if err != nil {
-		fmt.Println("Failed to fetch devices:", err)
 		http.Error(w, "Failed to fetch devices", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(ctx)
-
-	var devices []Device
-	if err := cursor.All(ctx, &devices); err != nil {
-		http.Error(w, "Failed to decode devices", http.StatusInternalServerError)
 		return
 	}
 

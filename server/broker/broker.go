@@ -13,19 +13,22 @@ import (
 	"github.com/otiai10/gosseract/v2"
 	"go.mongodb.org/mongo-driver/mongo"
 
-	"mqtt-streaming-server/routes"
+	"mqtt-streaming-server/domain"
+	"mqtt-streaming-server/repository"
 	"mqtt-streaming-server/utils"
 )
 
 type BrokerHandler struct {
-	db        *mongo.Database
-	ocrClient *gosseract.Client
+	photoRepository  domain.PhotoRepository
+	deviceRepository domain.DeviceRepository
+	ocrClient        *gosseract.Client
 }
 
 func NewBrokerHandler(db *mongo.Database, ocrClient *gosseract.Client) BrokerHandler {
 	return BrokerHandler{
-		db:        db,
-		ocrClient: ocrClient,
+		photoRepository:  repository.NewPhotoRepository(db),
+		deviceRepository: repository.NewDeviceRepository(db),
+		ocrClient:        ocrClient,
 	}
 }
 
@@ -36,9 +39,7 @@ func (b BrokerHandler) HandlePhoto(_ mqtt.Client, msg mqtt.Message) {
 	ctx := context.Background()
 	fmt.Println("Received message on topic:", msg.Topic())
 	// get registered device
-	collection := b.db.Collection("devices")
-	var result routes.Device
-	err := collection.FindOne(ctx, map[string]string{"device_id": deviceID}).Decode(&result)
+	device, err := b.deviceRepository.GetByID(ctx, deviceID)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			fmt.Printf("Device ID not found: %s\n", deviceID)
@@ -47,7 +48,7 @@ func (b BrokerHandler) HandlePhoto(_ mqtt.Client, msg mqtt.Message) {
 		}
 		return
 	}
-	fmt.Printf("Received photo from device: %s\n", result.DeviceName)
+	fmt.Printf("Received photo from device: %s\n", device.DeviceName)
 	body := msg.Payload()
 	_, imageType, err := image.DecodeConfig(bytes.NewReader(body))
 	if err != nil {
@@ -64,8 +65,7 @@ func (b BrokerHandler) HandlePhoto(_ mqtt.Client, msg mqtt.Message) {
 	}
 	// UTC timestamp
 	timestamp := time.Now().UTC()
-	collection = b.db.Collection("photos")
-	_, err = collection.InsertOne(ctx, routes.Photo{
+	err = b.photoRepository.Save(ctx, &domain.Photo{
 		ImageType: imageType,
 		Timestamp: timestamp,
 		DeviceID:  deviceID,
@@ -93,17 +93,15 @@ func (b BrokerHandler) RegisterDevice(_ mqtt.Client, msg mqtt.Message) {
 	fmt.Println("Received message on topic:", msg.Topic())
 	body := msg.Payload()
 	fmt.Printf("Received device registration: %s\n", body)
-	collection := b.db.Collection("devices")
 	// Check if device ID already exists
-	var result routes.Device
-	err := collection.FindOne(ctx, map[string]string{"device_id": deviceID}).Decode(&result)
+	_, err := b.deviceRepository.GetByID(ctx, deviceID)
 	if err != nil && err != mongo.ErrNoDocuments {
 		fmt.Printf("Failed to check device ID: %v\n", err)
 		return
 	}
 	if err == mongo.ErrNoDocuments {
 		// Device ID does not exist, insert it
-		_, err = collection.InsertOne(ctx, routes.Device{
+		err = b.deviceRepository.Save(ctx, &domain.Device{
 			DeviceID:     deviceID,
 			DeviceName:   string(body),
 			DeviceStatus: "active",
@@ -116,11 +114,11 @@ func (b BrokerHandler) RegisterDevice(_ mqtt.Client, msg mqtt.Message) {
 		return
 	}
 	// Device ID already exists, update it
-	_, err = collection.UpdateOne(ctx, map[string]string{"device_id": deviceID}, map[string]any{
-		"$set": map[string]any{
-			"device_name":   string(body),
-			"device_status": "active",
-		},
+	err = b.deviceRepository.Update(ctx, deviceID, &domain.Device{
+		DeviceID:     deviceID,
+		DeviceName:   string(body),
+		DeviceStatus: "active",
+		ID:           deviceID,
 	})
 	if err != nil {
 		fmt.Printf("Failed to update device ID: %v\n", err)

@@ -7,27 +7,21 @@ import (
 	"strconv"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 
+	"mqtt-streaming-server/domain"
+	"mqtt-streaming-server/repository"
 	"mqtt-streaming-server/utils"
 )
 
-type Photo struct {
-	ID           primitive.ObjectID `json:"id" bson:"_id,omitempty"`
-	Timestamp    time.Time          `json:"timestamp" bson:"timestamp"`
-	ImageType    string             `json:"image_type" bson:"image_type"`
-	PresignedURL string             `json:"presigned_url" bson:",omitempty"`
-	DeviceID     string             `json:"device_id" bson:"device_id"`
-	Text         string             `json:"text" bson:"text"`
-}
-
 type PhotoController struct {
-	db *mongo.Database
+	PhotoRepository domain.PhotoRepository
 }
 
 func InitPhotoRoutes(db *mongo.Database, mux *http.ServeMux) {
-	photoController := &PhotoController{db: db}
+	photoController := &PhotoController{
+		PhotoRepository: repository.NewPhotoRepository(db),
+	}
 
 	mux.Handle("/photos", withAuth(http.HandlerFunc(photoController.GetPhotos)))
 }
@@ -83,28 +77,20 @@ func (ctlr PhotoController) GetPhotos(w http.ResponseWriter, r *http.Request) {
 		filters["device_id"] = deviceID
 	}
 
-	collection := ctlr.db.Collection("photos")
-	cursor, err := collection.Find(ctx, filters)
+	photos, err := ctlr.PhotoRepository.GetPhotos(ctx, filters)
 	if err != nil {
-		http.Error(w, "Failed to fetch photos", http.StatusInternalServerError)
+		fmt.Println("Error fetching photos:", err)
+		http.Error(w, "Failed to fetch photos: ", http.StatusInternalServerError)
 		return
 	}
-	defer cursor.Close(ctx)
 
-	var photos []Photo
-	for cursor.Next(ctx) {
-		var photo Photo
-		if err := cursor.Decode(&photo); err != nil {
-			http.Error(w, "Failed to decode photo", http.StatusInternalServerError)
-			return
-		}
+	for _, photo := range photos {
 		presignedURL, err := utils.GetPresignedURL(ctx, fmt.Sprintf("photos/%d.%s", photo.Timestamp.Unix(), photo.ImageType))
 		if err != nil {
 			http.Error(w, "Failed to get presigned URL", http.StatusInternalServerError)
 			return
 		}
 		photo.PresignedURL = presignedURL
-		photos = append(photos, photo)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
