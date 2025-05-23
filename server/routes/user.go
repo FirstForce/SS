@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,21 +9,19 @@ import (
 	"github.com/golang-jwt/jwt/v4"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
+
+	"mqtt-streaming-server/domain"
+	"mqtt-streaming-server/repository"
 )
 
-type User struct {
-	Email    string `json:"email" bson:"email"`
-	Password string `json:"password" bson:"password"`
-	Role     string `json:"role,omitempty" bson:"role"`
-}
-
 type UserController struct {
-	db *mongo.Database
+	UserRepository domain.UserRepository
 }
 
 func InitUserRoutes(db *mongo.Database, mux *http.ServeMux) {
-	// Initialize the UserController with the database client
-	userController := &UserController{db: db}
+	userController := &UserController{
+		UserRepository: repository.NewUserRepository(db),
+	}
 
 	mux.HandleFunc("/register", userController.Register)
 	mux.HandleFunc("/login", userController.Login)
@@ -38,7 +35,7 @@ func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req User
+	var req domain.User
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -52,12 +49,7 @@ func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save the user to the database
-	collection := ctlr.db.Collection("users")
-	_, err = collection.InsertOne(context.Background(), User{
-		Email:    req.Email,
-		Password: string(hashedPassword),
-		Role:     "user",
-	})
+	err = ctlr.UserRepository.Save(r.Context(), req.Email, string(hashedPassword))
 	if err != nil {
 		http.Error(w, "Failed to save user", http.StatusInternalServerError)
 		return
@@ -73,24 +65,22 @@ func (ctlr UserController) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req User
+	var req domain.User
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	// Check if the user exists
-	collection := ctlr.db.Collection("users")
-	var user User
-	err := collection.FindOne(context.Background(), map[string]string{"email": req.Email}).Decode(&user)
+	user, err := ctlr.UserRepository.FindByEmail(r.Context(), req.Email)
 	if err != nil {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		http.Error(w, "Invalid email or password: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
 	// Verify the password
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		http.Error(w, "Invalid email or password", http.StatusUnauthorized)
+		http.Error(w, "Invalid email or password: "+err.Error(), http.StatusUnauthorized)
 		return
 	}
 
@@ -124,16 +114,13 @@ func (ctlr UserController) GetProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Retrieve the user's profile from the database
-	collection := ctlr.db.Collection("users")
-	var user struct {
-		Email string `bson:"email"`
-		Role  string `bson:"role"`
-	}
-	err := collection.FindOne(context.Background(), map[string]string{"email": email}).Decode(&user)
+	user, err := ctlr.UserRepository.FindByEmail(r.Context(), email)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
+	// Exclude the password from the response
+	user.Password = ""
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(user)
