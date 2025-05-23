@@ -3,9 +3,25 @@ import Navbar from './components/navbar';
 import HomePage from './pages/homePage';
 
 const Layout = () => {
+  const navButtons = [
+    {
+      text: 'Login',
+      variant: 'outline' as const,
+      onClick: () => console.log('Login clicked')
+    },
+    {
+      text: 'Register',
+      variant: 'primary' as const,
+      onClick: () => console.log('Register clicked')
+    }
+  ];
+
   return (
     <>
-      <Navbar title="Security of Systems - First Force" />
+      <Navbar 
+        title="Security of Systems - First Force"
+        buttons={navButtons}
+      />
       <div className="pt-16 px-4">
         <Outlet />
       </div>
