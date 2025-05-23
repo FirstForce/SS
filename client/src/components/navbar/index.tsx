@@ -11,10 +11,15 @@ interface ButtonProps {
 
 interface NavbarProps {
   title: string;
-  buttons?: ButtonProps[];
+  leftButtons?: ButtonProps[];
+  rightButtons?: ButtonProps[];
 }
 
-const Navbar: React.FC<NavbarProps> = ({ title, buttons = [] }) => {
+const Navbar: React.FC<NavbarProps> = ({ 
+  title, 
+  leftButtons = [], 
+  rightButtons = [] 
+}) => {
   const navigate = useNavigate();
 
   const handleTitleClick = () => {
@@ -24,8 +29,16 @@ const Navbar: React.FC<NavbarProps> = ({ title, buttons = [] }) => {
   return (
     <nav className="fixed top-0 left-0 right-0 bg-sky-50 shadow-sm z-50">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="w-24">
-          {/* Placeholder for left side content/logo */}
+        <div className="flex space-x-2">
+          {leftButtons.map((button, index) => (
+            <Button 
+              key={index}
+              text={button.text}
+              onClick={button.onClick}
+              variant={button.variant || 'outline'}
+              size="sm"
+            />
+          ))}
         </div>
         
         <h1 
@@ -35,8 +48,8 @@ const Navbar: React.FC<NavbarProps> = ({ title, buttons = [] }) => {
           {title}
         </h1>
         
-        <div className="flex justify-end space-x-2">
-          {buttons.map((button, index) => (
+        <div className="flex space-x-2">
+          {rightButtons.map((button, index) => (
             <Button 
               key={index}
               text={button.text}
