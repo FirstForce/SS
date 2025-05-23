@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import PhotoCard from '../../components/cards';
+import PhotoCard from '../../components/photosCards';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Interface for device data
