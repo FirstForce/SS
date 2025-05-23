@@ -5,6 +5,7 @@ interface ButtonProps {
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'sm' | 'md' | 'lg';
+  type?: 'button' | 'submit' | 'reset';
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -12,6 +13,7 @@ const Button: React.FC<ButtonProps> = ({
   onClick,
   variant = 'primary',
   size = 'md',
+  type = 'button',
 }) => {
   // Base styles
   const baseStyles = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-sky-400 focus:ring-offset-2';
@@ -34,7 +36,7 @@ const Button: React.FC<ButtonProps> = ({
     <button
       className={`${baseStyles} ${sizeStyles[size]} ${variantStyles[variant]}`}
       onClick={onClick}
-      type="button"
+      type={type}
     >
       {text}
     </button>
