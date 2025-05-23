@@ -1,16 +1,11 @@
 name: Deploy to Docker Swarm
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'broker/**'
-      - '.github/workflows/swarm.yml'
   workflow_run:
     workflows: ["Test Go Routes"]
     types:
       - completed
+  workflow_dispatch:
 
 jobs:
   deploy:
