@@ -10,6 +10,9 @@ on:
       - 'broker/mosquitto.conf'
       - '.github/workflows/swarm.yml'
 
+permissions:
+  actions: read
+
 jobs:
   tests:
     uses: FirstForce/SS/.github/workflows/tests.yml@4f94105d0f482895fc049a024708e2d7cade1baf
