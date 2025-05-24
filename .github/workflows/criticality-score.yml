@@ -24,4 +24,4 @@ jobs:
           GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Run criticality_score on this repository
-          criticality_score "https://github.com/FirstForce/SS" 
+          criticality_score -depsdev-disable "https://github.com/FirstForce/SS" 
