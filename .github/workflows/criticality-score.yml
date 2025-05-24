@@ -1,14 +1,13 @@
 name: Criticality Score Analysis
 
 on:
+  push:
   workflow_dispatch:
     inputs:
       repositories:
         description: 'Comma-separated list of repositories to analyze (e.g., https://github.com/ossf/criticality_score,https://github.com/kubernetes/kubernetes)'
         required: false
         default: 'https://github.com/ossf/criticality_score'
-  schedule:
-    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight
 
 jobs:
   analyze:
