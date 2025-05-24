@@ -17,7 +17,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Scorecard
-        run: go install github.com/ossf/scorecard/cmd/scorecard@latest
+        run: go install github.com/ossf/scorecard@latest
 
       - name: Run Scorecard analysis
         run: |
