@@ -1,4 +1,4 @@
-FROM golang:alpine AS build-env
+FROM golang:alpine@sha256:ef18ee7117463ac1055f5a370ed18b8750f01589f13ea0b48642f5792b234044 AS build-env
 
 WORKDIR /app
 COPY . /app
@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 
 # test
 RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -o mqtt ./main.go
-FROM alpine
+FROM alpine@sha256:a8560b36e8b8210634f77d9f7f9efd7ffa463e380b75e2e74aff4511df3ef88c
 WORKDIR /app
 COPY --from=build-env /app/mqtt /app/
 
