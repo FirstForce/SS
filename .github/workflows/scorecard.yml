@@ -20,9 +20,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Run scorecard in Docker on the current repository with detailed output
+          # First run with detailed tabular output
+          echo "=============== DETAILED SCORECARD RESULTS ==============="
           docker run --rm \
             -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
-            gcr.io/openssf/scorecard:latest \
+            gcr.io/openssf/scorecard:stable \
             --repo=https://github.com/${{ github.repository }} \
-            --show-details 
+            --show-details
+          
+          # Then run again with JSON format for a customized summary
+          echo -e "\n\n=============== SUMMARY OF KEY FINDINGS ==============="
+          docker run --rm \
+            -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
+            gcr.io/openssf/scorecard:stable \
+            --repo=https://github.com/${{ github.repository }} \
+            --format=json | tee scorecard-results.json
+          
+          # Extract and display key information in a simplified format
+          echo -e "\nAreas needing improvement (scores below 8):"
+          jq -r '.checks[] | select(.score < 8) | "- \(.name): Score \(.score)/10 - \(.reason)"' scorecard-results.json
+          
+          echo -e "\nStrong areas (scores 8 or above):"
+          jq -r '.checks[] | select(.score >= 8) | "- \(.name): Score \(.score)/10"' scorecard-results.json
+          
+          echo -e "\nOverall Score: $(jq -r '.score' scorecard-results.json)/10" 
