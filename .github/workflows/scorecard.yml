@@ -20,13 +20,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Run scorecard in Docker on the current repository and output to console
+          # Run scorecard in Docker on the current repository with detailed output
           docker run --rm \
             -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
             gcr.io/openssf/scorecard:latest \
             --repo=https://github.com/${{ github.repository }} \
-            --format=json | tee scorecard-results.json
-          
-          # Display a more human-readable summary
-          echo "============= SCORECARD RESULTS SUMMARY ============="
-          cat scorecard-results.json | jq -r '.checks[] | "Check: \(.name), Score: \(.score), Details: \(.reason)"' 
+            --show-details 
