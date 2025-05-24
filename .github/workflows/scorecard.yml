@@ -24,7 +24,7 @@ jobs:
           echo "=============== DETAILED SCORECARD RESULTS ==============="
           docker run --rm \
             -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
-            gcr.io/openssf/scorecard:stable \
+            gcr.io/openssf/scorecard:latest \
             --repo=https://github.com/${{ github.repository }} \
             --show-details
           
