@@ -2,5 +2,34 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
-  ]
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "client dependencies",
+      "labels": ["frontend", "dependencies"]
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "server dependencies",
+      "labels": ["backend", "dependencies"]
+    },
+    {
+      "matchManagers": ["gradle"],
+      "matchPackagePatterns": ["*"],
+      "groupName": "android dependencies",
+      "labels": ["android", "dependencies"]
+    }
+  ],
+  "timezone": "Europe/Berlin",
+  "labels": ["dependencies"],
+  "vulnerabilityAlerts": {
+    "labels": ["security"],
+    "schedule": "at any time"
+  },
+  "baseBranches": ["main"],
+  "assignees": [],
+  "reviewers": []
 }
