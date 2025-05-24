@@ -5,32 +5,59 @@
   ],
   "packageRules": [
     {
-      "matchManagers": ["npm"],
-      "matchPackagePatterns": ["*"],
+      "matchManagers": [
+        "npm"
+      ],
       "groupName": "client dependencies",
-      "labels": ["frontend", "dependencies"]
+      "labels": [
+        "frontend",
+        "dependencies"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
     },
     {
-      "matchManagers": ["gomod"],
-      "matchPackagePatterns": ["*"],
+      "matchManagers": [
+        "gomod"
+      ],
       "groupName": "server dependencies",
-      "labels": ["backend", "dependencies"]
+      "labels": [
+        "backend",
+        "dependencies"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
     },
     {
-      "matchManagers": ["gradle"],
-      "matchPackagePatterns": ["*"],
+      "matchManagers": [
+        "gradle"
+      ],
       "groupName": "android dependencies",
-      "labels": ["android", "dependencies"]
+      "labels": [
+        "android",
+        "dependencies"
+      ],
+      "matchPackageNames": [
+        "*"
+      ]
     }
   ],
   "timezone": "Europe/Berlin",
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "vulnerabilityAlerts": {
-    "labels": ["security"],
+    "labels": [
+      "security"
+    ],
     "schedule": "at any time"
   },
   "prConcurrentLimit": 5,
-  "baseBranches": ["main"],
+  "baseBranches": [
+    "main"
+  ],
   "assignees": [],
   "reviewers": []
 }
