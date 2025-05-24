@@ -17,9 +17,12 @@ jobs:
           persist-credentials: false
 
       - name: Run Scorecard using Docker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Run scorecard in Docker on the current repository and output to console
           docker run --rm \
+            -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
             gcr.io/openssf/scorecard:latest \
             --repo=https://github.com/${{ github.repository }} \
             --format=json | tee scorecard-results.json
