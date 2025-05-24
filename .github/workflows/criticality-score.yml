@@ -1,0 +1,65 @@
+name: Criticality Score Analysis
+
+on:
+  workflow_dispatch:
+    inputs:
+      repositories:
+        description: 'Comma-separated list of repositories to analyze (e.g., https://github.com/ossf/criticality_score,https://github.com/kubernetes/kubernetes)'
+        required: false
+        default: 'https://github.com/ossf/criticality_score'
+  schedule:
+    - cron: '0 0 * * 0'  # Run weekly on Sunday at midnight
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+
+      - name: Install criticality_score
+        run: go install github.com/ossf/criticality_score/v2/cmd/criticality_score@latest
+
+      - name: Run criticality_score
+        id: run_analysis
+        env:
+          GITHUB_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p results
+          
+          # Get repositories from input or use default
+          REPOS="${{ github.event.inputs.repositories }}"
+          if [ -z "$REPOS" ]; then
+            # Default repositories to analyze if not specified
+            REPOS="https://github.com/ossf/criticality_score"
+          fi
+          
+          # Convert comma-separated list to array
+          IFS=',' read -ra REPO_ARRAY <<< "$REPOS"
+          
+          # Run criticality_score for each repository
+          for repo in "${REPO_ARRAY[@]}"; do
+            echo "Analyzing $repo"
+            filename=$(echo $repo | sed 's/https:\/\/github.com\///g' | sed 's/\//_/g')
+            criticality_score -format json "$repo" > "results/${filename}.json"
+            criticality_score "$repo" > "results/${filename}.txt"
+          done
+          
+          # Combine all results into a CSV file
+          echo "repository,default_score" > results/combined_results.csv
+          for file in results/*.json; do
+            repo=$(jq -r '.repo.url' "$file")
+            score=$(jq -r '.default_score' "$file")
+            echo "$repo,$score" >> results/combined_results.csv
+          done
+
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: criticality-score-results
+          path: results/ 
