@@ -29,6 +29,7 @@
     "labels": ["security"],
     "schedule": "at any time"
   },
+  "prConcurrentLimit": 5,
   "baseBranches": ["main"],
   "assignees": [],
   "reviewers": []
