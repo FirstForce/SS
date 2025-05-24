@@ -16,13 +16,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install Scorecard
-        run: go install github.com/ossf/scorecard@latest
-
-      - name: Run Scorecard analysis
+      - name: Run Scorecard using Docker
         run: |
-          # Run scorecard on the current repository and output to console
-          scorecard --repo=https://github.com/${{ github.repository }} --format=json | tee scorecard-results.json
+          # Run scorecard in Docker on the current repository and output to console
+          docker run --rm \
+            gcr.io/openssf/scorecard:latest \
+            --repo=https://github.com/${{ github.repository }} \
+            --format=json | tee scorecard-results.json
+          
           # Display a more human-readable summary
           echo "============= SCORECARD RESULTS SUMMARY ============="
           cat scorecard-results.json | jq -r '.checks[] | "Check: \(.name), Score: \(.score), Details: \(.reason)"' 
