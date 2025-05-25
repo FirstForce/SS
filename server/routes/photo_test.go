@@ -70,3 +70,44 @@ func TestPhotoController_GetPhotos(t *testing.T) {
 		})
 	}
 }
+
+
+func TestPhotoController_GetPhotos_MethodNotAllowed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockPhotoRepository(ctrl)
+	ctlr := routes.PhotoController{PhotoRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodPost, "/photos", nil) // Using POST instead of GET
+	rr := httptest.NewRecorder()
+
+	ctlr.GetPhotos(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Method not allowed") {
+		t.Errorf("expected body to contain 'Method not allowed', got %q", rr.Body.String())
+	}
+}
+
+func TestPhotoController_GetPhotos_InvalidTimestamp(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockPhotoRepository(ctrl)
+	ctlr := routes.PhotoController{PhotoRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodGet, "/photos?start=invalid&end=invalid", nil)
+	rr := httptest.NewRecorder()
+
+	ctlr.GetPhotos(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Errorf("expected status %d, got %d", http.StatusBadRequest, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Invalid start timestamp") && !strings.Contains(rr.Body.String(), "Invalid end timestamp") {
+		t.Errorf("expected body to contain 'Invalid start timestamp' or 'Invalid end timestamp', got %q", rr.Body.String())
+	}
+}

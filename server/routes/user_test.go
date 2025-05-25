@@ -209,3 +209,84 @@ func TestUserController_GetProfile(t *testing.T) {
 		})
 	}
 }
+
+func TestUserController_GetProfile_Unauthorized(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockUserRepository(ctrl)
+	ctlr := routes.UserController{UserRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	rr := httptest.NewRecorder()
+
+	// No email in context
+	ctlr.GetProfile(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Email not found in context") {
+		t.Errorf("expected body to contain 'Email not found in context', got %q", rr.Body.String())
+	}
+}
+
+func TestUserController_GetProfile_MethodNotAllowed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockUserRepository(ctrl)
+	ctlr := routes.UserController{UserRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodPost, "/profile", nil) // Using POST instead of GET
+	rr := httptest.NewRecorder()
+
+	ctlr.GetProfile(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Method not allowed") {
+		t.Errorf("expected body to contain 'Method not allowed', got %q", rr.Body.String())
+	}
+}
+
+func TestUserController_Register_MethodNotAllowed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockUserRepository(ctrl)
+	ctlr := routes.UserController{UserRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodGet, "/register", nil) // Using GET instead of POST
+	rr := httptest.NewRecorder()
+
+	ctlr.Register(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Method not allowed") {
+		t.Errorf("expected body to contain 'Method not allowed', got %q", rr.Body.String())
+	}
+}
+
+func TestUserController_Login_MethodNotAllowed(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockUserRepository(ctrl)
+	ctlr := routes.UserController{UserRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodGet, "/login", nil) // Using GET instead of POST
+	rr := httptest.NewRecorder()
+
+	ctlr.Login(rr, req)
+
+	if rr.Code != http.StatusMethodNotAllowed {
+		t.Errorf("expected status %d, got %d", http.StatusMethodNotAllowed, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Method not allowed") {
+		t.Errorf("expected body to contain 'Method not allowed', got %q", rr.Body.String())
+	}
+}
