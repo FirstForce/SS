@@ -42,7 +42,7 @@ jobs:
           # Install syft if not already available
           if ! command -v syft &> /dev/null; then
             echo "Installing Syft..." >> $GITHUB_STEP_SUMMARY
-            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+            curl --pinnedpubkey "sha256//1FtgkXeU53bUTaObUogizKNIqs/ZGaEo1k2AwG30xts=" -sSfL https://raw.githubusercontent.com/anchore/syft/bbf3bb585691f3d784176f898c64dc56f70cd649/install.sh | sh -s -- -b /usr/local/bin
           fi
           
           # Generate table format SBOM for better readability
