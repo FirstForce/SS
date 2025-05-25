@@ -49,7 +49,7 @@ func NewTLSConfig() *tls.Config {
 		ClientCAs: certpool,
 		// InsecureSkipVerify = verify that cert contents
 		// match server. IP matches what is in cert etc.
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: false,
 		// Certificates = list of certs client sends to server.
 		Certificates: []tls.Certificate{cert},
 	}
