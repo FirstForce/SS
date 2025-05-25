@@ -32,6 +32,7 @@ jobs:
           path: ./server
           format: spdx-json
           output-file: ./server-sbom.spdx.json
+          upload-artifact: false
 
       - name: Display Human Readable SBOM
         run: |
