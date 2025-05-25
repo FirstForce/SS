@@ -118,7 +118,6 @@ func (b BrokerHandler) RegisterDevice(_ mqtt.Client, msg mqtt.Message) {
 		DeviceID:     deviceID,
 		DeviceName:   string(body),
 		DeviceStatus: "active",
-		ID:           deviceID,
 	})
 	if err != nil {
 		fmt.Printf("Failed to update device ID: %v\n", err)
@@ -154,7 +153,6 @@ func (b BrokerHandler) DisconnectDevice(_ mqtt.Client, msg mqtt.Message) {
 	err = b.deviceRepository.Update(ctx, deviceID, &domain.Device{
 		DeviceID:     deviceID,
 		DeviceStatus: "inactive",
-		ID:           device.ID,
 		DeviceName:   device.DeviceName,
 	})
 	if err != nil {

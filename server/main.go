@@ -106,6 +106,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	if token := client.Subscribe("device/id/#", 0, brokerHandler.DisconnectDevice); token.Wait() && token.Error() != nil {
+		fmt.Println(token.Error())
+		os.Exit(1)
+	}
+
 	// Initialize user routes
 	handler := routes.InitRoutes(db, client)
 
