@@ -12,16 +12,10 @@ paths-ignore:
   - '**/vendor/**'
   - '**/mocks/**'
 
-# Customize query suites
+# Use all available queries
 queries:
+  - uses: security-extended
   - uses: security-and-quality
 
-# Query filters to exclude specific queries
-query-filters:
-  - exclude:
-      id: go/log-injection
-  - exclude:
-      id: go/unsafe-reflection
-
-# Disable the default queries
-disable-default-queries: false 
+# Don't disable any default queries
+disable-default-queries: false
