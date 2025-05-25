@@ -290,3 +290,32 @@ func TestUserController_Login_MethodNotAllowed(t *testing.T) {
 		t.Errorf("expected body to contain 'Method not allowed', got %q", rr.Body.String())
 	}
 }
+
+//login is missing coverage compare hash password with the one in the database
+func TestUserController_Login_InvalidPassword(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockRepo := mock_domain.NewMockUserRepository(ctrl)
+	ctlr := routes.UserController{UserRepository: mockRepo}
+
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(`{"email": "example@example.com", "password": "wrongpassword"}`))
+	ctx := context.WithValue(req.Context(), "email", "example@example.com")
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	mockRepo.EXPECT().
+	FindByEmail(gomock.Any(), "example@example.com").
+		Return(&domain.User{
+			Email:    "example@example.com",
+			Password: "$2a$12$OZ5oYXEsFvcaaVh/nmgt.cknGSFzKVlr.wkrzyCl5rgHuAGGkhiS", // hashed password for "password123"
+		}, nil)
+	ctlr.Login(rr, req)
+	if rr.Code != http.StatusUnauthorized {
+		t.Errorf("expected status %d, got %d", http.StatusUnauthorized, rr.Code)
+	}
+	if !strings.Contains(rr.Body.String(), "Invalid email or password") {
+		t.Errorf("expected body to contain 'Invalid email or password', got %q", rr.Body.String())
+	}
+}
+
+
