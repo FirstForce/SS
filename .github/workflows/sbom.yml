@@ -1,0 +1,64 @@
+name: "Generate Server SBOM"
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'server/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-sbom:
+    name: Generate SBOM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      id-token: write # Needed for provenance signing
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v4.2.2
+        with:
+          # For PRs, checkout the PR branch; otherwise checkout the default branch
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || '' }}
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@9fece9e20048ca9590af301449208b2b8861333b # v0.15.9
+        with:
+          path: ./server
+          format: spdx-json
+          output-file: ./server-sbom.spdx.json
+          artifact-name: server-sbom
+
+      - name: Display Human Readable SBOM
+        run: |
+          echo "## Server SBOM Summary" >> $GITHUB_STEP_SUMMARY
+          echo "Generating human-readable SBOM report..." >> $GITHUB_STEP_SUMMARY
+          
+          # Install syft if not already available
+          if ! command -v syft &> /dev/null; then
+            echo "Installing Syft..." >> $GITHUB_STEP_SUMMARY
+            curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          fi
+          
+          # Generate table format SBOM for better readability
+          syft ./server -o table >> sbom-table.txt
+          
+          # Add the table output to the job summary
+          echo "Package overview:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat sbom-table.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f80f # v4.3.4
+        with:
+          name: server-sbom-files
+          path: |
+            ./server-sbom.spdx.json
+            ./sbom-table.txt
+          retention-days: 7 

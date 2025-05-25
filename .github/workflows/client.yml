@@ -7,6 +7,10 @@ on:
       - 'client/**'
       - '.github/workflows/client.yml'
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   deploy-backend:
     runs-on: ubuntu-latest
