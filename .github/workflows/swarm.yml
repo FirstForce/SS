@@ -51,7 +51,7 @@ jobs:
         sed "s|$IMAGE_NAME:.*|$IMAGE_NAME:${{ steps.vars.outputs.sha_short }}|" docker-compose.yml > docker-compose.deploy.yml
 
     - name: Copy Compose file to remote server
-      uses: appleboy/scp-action@6d1fc191a822daa12faa45f3a985413f995ff5c5
+      uses: appleboy/scp-action@7f18bf0ec86d81d9fba5e2bdf3253b7b22a604ab
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
@@ -60,7 +60,7 @@ jobs:
         target: "/home/${{ secrets.SSH_USER }}/mystack/"
 
     - name: Copy Mosquitto Config file to remote server
-      uses: appleboy/scp-action@6d1fc191a822daa12faa45f3a985413f995ff5c5
+      uses: appleboy/scp-action@7f18bf0ec86d81d9fba5e2bdf3253b7b22a604ab
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
