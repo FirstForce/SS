@@ -32,7 +32,7 @@ jobs:
           path: ./server
           format: spdx-json
           output-file: ./server-sbom.spdx.json
-          artifact-name: server-sbom
+          upload-artifact: false
 
       - name: Display Human Readable SBOM
         run: |
@@ -55,10 +55,10 @@ jobs:
           echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload SBOM as artifact
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f80f # v4.3.4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: server-sbom-files
           path: |
             ./server-sbom.spdx.json
             ./sbom-table.txt
-          retention-days: 7 
+          retention-days: 7
