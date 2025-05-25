@@ -42,6 +42,18 @@ func (ctlr UserController) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// look for existing user
+	existingUser, err := ctlr.UserRepository.FindByEmail(r.Context(), req.Email)
+	if err != nil && err != mongo.ErrNoDocuments {
+		http.Error(w, "Failed to check existing user", http.StatusInternalServerError)
+		return
+	}
+
+	if existingUser != nil {
+		http.Error(w, "User already exists", http.StatusConflict)
+		return
+	}
+
 	// Hash the password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
