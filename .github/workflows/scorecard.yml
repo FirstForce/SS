@@ -1,15 +1,9 @@
 name: OpenSSF Scorecard Analysis
 
 on:
-  push:
-    branches:
-      - main
-
   pull_request:
     branches:
       - main
-  
-  workflow_dispatch:
 
 permissions:
   actions: read
@@ -24,6 +18,8 @@ jobs:
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
         with:
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
       - name: Run Scorecard using Docker
         env:
@@ -33,16 +29,18 @@ jobs:
           echo "=============== DETAILED SCORECARD RESULTS ==============="
           docker run --rm \
             -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
+            -v $(pwd):/repo \
             gcr.io/openssf/scorecard:latest \
-            --repo=https://github.com/${{ github.repository }} \
+            --local /repo/server \
             --show-details
           
           # Then run again with JSON format for a customized summary
           echo -e "\n\n=============== SUMMARY OF KEY FINDINGS ==============="
           docker run --rm \
             -e GITHUB_AUTH_TOKEN=$GITHUB_TOKEN \
+            -v $(pwd):/repo \
             gcr.io/openssf/scorecard:stable \
-            --repo=https://github.com/${{ github.repository }} \
+            --local /repo/server \
             --format=json | tee scorecard-results.json
           
           # Extract and display key information in a simplified format
