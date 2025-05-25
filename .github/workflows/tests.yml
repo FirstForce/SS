@@ -7,16 +7,16 @@ on:
       - '.github/workflows/tests.yml'
   workflow_call:
 
-permissions:
-  actions: read
+permissions: read-all
 
 jobs:
   test-routes:
     name: Run tests for ./server/routes
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
-      checks: write # Needed to report test results
+      checks: read
 
     steps:
       - name: Checkout code
