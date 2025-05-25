@@ -19,7 +19,7 @@ func NewPhotoRepository(db *mongo.Database) *photoRepository {
 
 func (repo *photoRepository) GetPhotos(ctx context.Context, filters map[string]any) ([]*domain.Photo, error) {
 	collection := repo.db.Collection("photos")
-	var photos []*domain.Photo
+	photos := make([]*domain.Photo, 0)
 	cursor, err := collection.Find(ctx, filters, &options.FindOptions{
 		Sort: map[string]int{"timestamp": -1}, // Sort by timestamp in descending order
 	})
