@@ -2,6 +2,7 @@ package routes_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -291,7 +292,7 @@ func TestUserController_Login_MethodNotAllowed(t *testing.T) {
 	}
 }
 
-//login is missing coverage compare hash password with the one in the database
+// login is missing coverage compare hash password with the one in the database
 func TestUserController_Login_InvalidPassword(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -304,7 +305,7 @@ func TestUserController_Login_InvalidPassword(t *testing.T) {
 	req = req.WithContext(ctx)
 	rr := httptest.NewRecorder()
 	mockRepo.EXPECT().
-	FindByEmail(gomock.Any(), "example@example.com").
+		FindByEmail(gomock.Any(), "example@example.com").
 		Return(&domain.User{
 			Email:    "example@example.com",
 			Password: "$2a$12$OZ5oYXEsFvcaaVh/nmgt.cknGSFzKVlr.wkrzyCl5rgHuAGGkhiS", // hashed password for "password123"
@@ -318,4 +319,65 @@ func TestUserController_Login_InvalidPassword(t *testing.T) {
 	}
 }
 
+func FuzzUserController_Register(f *testing.F) {
+	seedInputs := []string{
+		`{"email": "user@example.com", "password": "pass1234"}`,
+		`{"email": "", "password": ""}`,
+		`{"email": "a@b.c", "password": "short"}`,
+		`not-json`,
+		`{"email": "incomplete`,
+	}
 
+	for _, input := range seedInputs {
+		f.Add(input)
+	}
+
+	f.Fuzz(func(t *testing.T, input string) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockRepo := mock_domain.NewMockUserRepository(ctrl)
+		ctlr := routes.UserController{UserRepository: mockRepo}
+
+		req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(input))
+		req.Header.Set("Content-Type", "application/json")
+		rr := httptest.NewRecorder()
+
+		var parsed struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+
+		// Try parsing input to decide if it's a valid JSON
+		if err := json.Unmarshal([]byte(input), &parsed); err == nil {
+			// JSON is valid, simulate typical repo behavior
+			mockRepo.EXPECT().
+				FindByEmail(gomock.Any(), parsed.Email).
+				Return(nil, nil).
+				AnyTimes()
+
+			mockRepo.EXPECT().
+				Save(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+		} else {
+			// JSON is invalid, we expect a bad request response
+			mockRepo.EXPECT().
+				FindByEmail(gomock.Any(), gomock.Any()).
+				Return(nil, nil).
+				AnyTimes()
+			mockRepo.EXPECT().
+				Save(gomock.Any(), gomock.Any(), gomock.Any()).
+				Return(nil).
+				AnyTimes()
+		}
+
+		// Call the actual controller
+		ctlr.Register(rr, req)
+
+		// Ensure status code is within the valid HTTP range
+		if rr.Code < 100 || rr.Code > 599 {
+			t.Errorf("unexpected status code: %d for input: %q", rr.Code, input)
+		}
+	})
+}

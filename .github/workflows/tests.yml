@@ -39,3 +39,12 @@ jobs:
             echo "Coverage below threshold (30%)"
             exit 1
           fi
+
+      - name: Fuzzing
+        run: |
+          cd server
+          go test ./routes -fuzz=FuzzUserController_Register -fuzztime=10s
+          if [ $? -ne 0 ]; then
+            echo "Fuzzing tests failed"
+            exit 1
+          fi
