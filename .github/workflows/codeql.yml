@@ -21,6 +21,8 @@ on:
 
 permissions:
   actions: read
+  security-events: read
+  contents: read
 
 jobs:
   analyze:
