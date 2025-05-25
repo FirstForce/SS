@@ -4,11 +4,13 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   analysis:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout code
