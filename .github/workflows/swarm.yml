@@ -69,7 +69,7 @@ jobs:
         target: "/home/${{ secrets.SSH_USER }}/mystack/"
 
     - name: Deploy updated stack on remote server
-      uses: appleboy/ssh-action@55dabf81b49d4120609345970c91507e2d734799
+      uses: appleboy/ssh-action@ffd1eec36471c1bfbebcf1941411db862c9b0e38
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
