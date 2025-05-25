@@ -98,15 +98,3 @@ jobs:
       uses: github/codeql-action/analyze@v3
       with:
         category: "/language:${{matrix.language}}"
-
-paths:
-  - server
-paths-ignore:
-  - '**/test/**'
-  - '**/tests/**'
-  - '**/*.test.go'
-
-query-filters:
-  - exclude:
-      id: go/log-injection
-
