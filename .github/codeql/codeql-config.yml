@@ -1,0 +1,27 @@
+name: "Custom CodeQL Configuration for Server Directory"
+
+# Specify paths to include in the analysis
+paths:
+  - server
+
+# Paths to exclude from analysis
+paths-ignore:
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/*.test.go'
+  - '**/vendor/**'
+  - '**/mocks/**'
+
+# Customize query suites
+queries:
+  - uses: security-and-quality
+
+# Query filters to exclude specific queries
+query-filters:
+  - exclude:
+      id: go/log-injection
+  - exclude:
+      id: go/unsafe-reflection
+
+# Disable the default queries
+disable-default-queries: false 
