@@ -4,15 +4,17 @@ on:
   push:
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   analysis:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
         with:
           persist-credentials: false
 
