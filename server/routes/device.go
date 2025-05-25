@@ -51,7 +51,7 @@ func (ctlr DeviceController) SwitchDeviceMode(w http.ResponseWriter, r *http.Req
 	}
 
 	topic := fmt.Sprintf("setup/%s", device.ID)
-	if token := ctlr.mqttClient.Publish(topic, 0, false, "set "+device.Mode); token.Wait() && token.Error() != nil {
+	if token := ctlr.mqttClient.Publish(topic, 0, false, "start "+device.Mode); token.Wait() && token.Error() != nil {
 		http.Error(w, "Failed to publish message", http.StatusInternalServerError)
 		return
 	}
