@@ -58,7 +58,7 @@ func (b BrokerHandler) HandlePhoto(_ mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("Image type: %s\n", imageType)
 
 	// Extract text from image
-	text, err := b.ExtractTextFromImage(body)
+	text, err := b.extractTextFromImage(body)
 	if err != nil {
 		fmt.Printf("Failed to extract text from image: %v\n", err)
 		text = "OCR failed"
@@ -127,7 +127,44 @@ func (b BrokerHandler) RegisterDevice(_ mqtt.Client, msg mqtt.Message) {
 	fmt.Printf("Device updated: %s\n", deviceID)
 }
 
-func (b BrokerHandler) ExtractTextFromImage(imageData []byte) (string, error) {
+func (b BrokerHandler) DisconnectDevice(_ mqtt.Client, msg mqtt.Message) {
+	topic := msg.Topic()
+	// topic is disconnect/device_id
+	deviceID := topic[len("device/id/"):]
+	ctx := context.Background()
+	fmt.Println("Received message on topic:", msg.Topic())
+	message := string(msg.Payload())
+	fmt.Printf("Received device disconnection: %s\n", message)
+	// Check if message is a disconnect request
+	if message != "Device disconnected" {
+		fmt.Printf("Invalid disconnection message: %s\n", message)
+		return
+	}
+	// Check if device ID exists
+	device, err := b.deviceRepository.GetByID(ctx, deviceID)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			fmt.Printf("Device ID not found: %s\n", deviceID)
+		} else {
+			fmt.Printf("Failed to check device ID: %v\n", err)
+		}
+		return
+	}
+	// Update device status to inactive
+	err = b.deviceRepository.Update(ctx, deviceID, &domain.Device{
+		DeviceID:     deviceID,
+		DeviceStatus: "inactive",
+		ID:           device.ID,
+		DeviceName:   device.DeviceName,
+	})
+	if err != nil {
+		fmt.Printf("Failed to update device ID: %v\n", err)
+		return
+	}
+	fmt.Printf("Device disconnected: %s\n", deviceID)
+}
+
+func (b BrokerHandler) extractTextFromImage(imageData []byte) (string, error) {
 	// Use the OCR client to extract text from the image
 	b.ocrClient.SetImageFromBytes(imageData)
 	text, err := b.ocrClient.Text()

@@ -21,12 +21,22 @@ func TestUserController_Register(t *testing.T) {
 		inputBody      string
 		mockSaveReturn error
 		expectedStatus int
+		expectedUser   *domain.User
 	}{
 		{
 			name:           "successful registration",
 			inputBody:      `{"email": "test@example.com", "password": "securepass"}`,
 			mockSaveReturn: nil,
 			expectedStatus: http.StatusCreated,
+		},
+		{
+			name:           "user already exists",
+			inputBody:      `{"email": "test@example.com", "password": "securepass"}`,
+			mockSaveReturn: errors.New("user already exists"), // Simulate existing user
+			expectedStatus: http.StatusConflict,
+			expectedUser: &domain.User{
+				Email: "test@example.com",
+			},
 		},
 		{
 			name:           "invalid JSON",
@@ -55,6 +65,9 @@ func TestUserController_Register(t *testing.T) {
 			rr := httptest.NewRecorder()
 
 			if tt.expectedStatus != http.StatusBadRequest {
+				mockRepo.EXPECT().FindByEmail(gomock.Any(), gomock.Any()).Return(tt.expectedUser, nil)
+			}
+			if tt.expectedStatus != http.StatusBadRequest && tt.expectedStatus != http.StatusConflict {
 				mockRepo.EXPECT().Save(gomock.Any(), gomock.Any(), gomock.Any()).Return(tt.mockSaveReturn)
 			}
 

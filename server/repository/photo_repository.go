@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"mqtt-streaming-server/domain"
 )
@@ -19,7 +20,9 @@ func NewPhotoRepository(db *mongo.Database) *photoRepository {
 func (repo *photoRepository) GetPhotos(ctx context.Context, filters map[string]any) ([]*domain.Photo, error) {
 	collection := repo.db.Collection("photos")
 	var photos []*domain.Photo
-	cursor, err := collection.Find(ctx, filters)
+	cursor, err := collection.Find(ctx, filters, &options.FindOptions{
+		Sort: map[string]int{"timestamp": -1}, // Sort by timestamp in descending order
+	})
 	if err != nil {
 		return nil, err
 	}
