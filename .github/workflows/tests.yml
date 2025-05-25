@@ -8,15 +8,12 @@ on:
   workflow_call:
 
 permissions:
-  actions: read
+  contents: read
 
 jobs:
   test-routes:
     name: Run tests for ./server/routes
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      checks: write # Needed to report test results
 
     steps:
       - name: Checkout code
