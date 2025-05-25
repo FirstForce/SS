@@ -135,7 +135,7 @@ func (b BrokerHandler) DisconnectDevice(_ mqtt.Client, msg mqtt.Message) {
 	message := string(msg.Payload())
 	fmt.Printf("Received device disconnection: %s\n", message)
 	// Check if message is a disconnect request
-	if message != "Device disconnected" {
+	if message != "Device Disconnected" {
 		fmt.Printf("Invalid disconnection message: %s\n", message)
 		return
 	}
@@ -147,6 +147,10 @@ func (b BrokerHandler) DisconnectDevice(_ mqtt.Client, msg mqtt.Message) {
 		} else {
 			fmt.Printf("Failed to check device ID: %v\n", err)
 		}
+		return
+	}
+	if device.DeviceStatus != "active" {
+		fmt.Printf("Device ID is not active: %s\n", deviceID)
 		return
 	}
 	// Update device status to inactive
