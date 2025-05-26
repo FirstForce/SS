@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   tests:
-    uses: FirstForce/SS/.github/workflows/tests.yml@542058201257a0367fdc5025fda52b2e7b30acea
+    uses: FirstForce/SS/.github/workflows/tests.yml@cbede8e9829dc46c839d824bb1fc998194bf1b19
 
   deploy:
     needs: tests
